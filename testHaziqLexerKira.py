@@ -167,10 +167,10 @@ def lexer(text):
 
 def print_token_stream(tokens):
     print("== TOKEN STREAM ==")
-    print("LINE  COLUMN  TYPE        LEXEME")
+    print("LINE   COL  TYPE        LEXEME")
 
     for token in tokens:
-        print("{:4}  {:6}  {:11} {}".format(
+        print("{:4}  {:4}  {:11} {}".format(
             token.line,
             token.column,
             token.type,
@@ -198,7 +198,9 @@ def print_token_counts(tokens):
                 token_type, counts[token_type]
             ))
 
-with open("public4_lexical_errors.kira", "r") as file:
+
+#this just sample to test lexer. can be changed to whatever.
+with open("public6_syntax_end_of_input.kira", "r") as file:
     text = file.read()
 
 # Scan the source code
@@ -206,12 +208,15 @@ tokens, errors = lexer(text)
 
 # Display the results
 print_token_stream(tokens)
-print_token_counts(tokens)
 
-# Display lexical errors
+# Display lexical errors. it print error but please make it of there an error it cannot be pass to parsing
 if errors:
     print("\n== LEXICAL ERRORS ==")
     for error in errors:
         print(error)
+
+print_token_counts(tokens)
+
+
 
 #Will need to check again
