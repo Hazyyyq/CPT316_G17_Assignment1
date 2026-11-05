@@ -84,7 +84,7 @@ def lexer(text):
                     count += 1
                     column += 1
         
-                errors.append("LexicalError at line {}, column {}: invalid sequence '{}'".format(line, start_column, reject_word))
+                errors.append("LexicalError at line {}, col {}: invalid sequence '{}'".format(line, start_column, reject_word))
                         
             else:
                 tokens.append(Token(tInteger, int(num), line, start_column))
@@ -122,7 +122,7 @@ def lexer(text):
 
             else:
                 errors.append(
-                    "LexicalError at line {}, column {}: "
+                    "LexicalError at line {}, col {}: " #can't use column as it shall be col instead
                     "invalid character '!'"
                     .format(line, start_column)
                 )
@@ -200,7 +200,7 @@ def print_token_counts(tokens):
 
 
 #this just sample to test lexer. can be changed to whatever.
-with open("public6_syntax_end_of_input.kira", "r") as file:
+with open("public1_arithmetic_if.kira", "r") as file:
     text = file.read()
 
 # Scan the source code

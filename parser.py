@@ -38,7 +38,7 @@ def parse_decl(tokens, pos, parse_expr):
     Parses a top-level variable declaration.
     Grammar Rule: <decl> -> 'let' id '=' <expr> ';'
     """
-    _, pos1 = expect(tokens, pos, tKeyword, "let")
+    _, pos1 = expect(tokens, pos, tKeyword, "let") #_ is a dummy, mean that the important this is the sec one, which is pos1 
     id_tok, pos2 = expect(tokens, pos1, tIdentifier)
     _, pos3 = expect(tokens, pos2, tAssign, "=")
     expr_node, pos4 = parse_expr(tokens, pos3)      # Delegates expression parsing
@@ -196,9 +196,83 @@ def parse_program(tokens, parse_expr, parse_cond):
     rest_items, _ = parse_item_list_tail(tokens, pos1, parse_expr, parse_cond)
     return make_node("Program", (first_item,) + rest_items)
 
-
+# Starting point of the parser T-T
 def run_statement_parser(parse_expr_fn, parse_cond_fn, token_stream=tokens, error_list=errors):
     """Receives tokens and errors from the lexer and runs the parser if valid."""
-    if error_list:
+    if error_list: #based on the lexer, if there are errors, we don't run the parser
         return None
-    return parse_program(tuple(token_stream), parse_expr_fn, parse_cond_fn)
+    return parse_program(tuple(token_stream), parse_expr_fn, parse_cond_fn) #start the parsing process with the first token and the provided expression and condition parsers
+
+# ==============================================================================
+# PARSER FOR EXPRESSIONS (Functional Programming Paradigm - HAZIQ)
+# =============================================================================
+
+#Expression with higher precedence 
+def parse_factor(tokens, pos): 
+
+    if pos >= len(tokens):
+        raise SyntaxError("SyntaxError at end of input: expected expression")
+
+    tok = tokens[pos]
+
+    # Rules id --> Node("Id <name>"), id become a name
+    if tok.type == tIdentifier:
+        return make_node(f"Id {tok.value}"), pos + 1
+
+    # Rules int --> Node("Int <value>"), Int become a value
+    if tok.type == tInteger:   
+        return make_node(f"Int {tok.value}"), pos + 1 
+
+    # Rules ( <expr> ) --> Node("Paren <expr>") if the expression has parentheses, we look inside using parse_expr recursively
+    if tok.type == tLParen:
+        _, pos1 = expect(tokens, pos, tLParen, "(")
+        expr_node, pos2 = parse_expr(tokens, pos1)
+        _, pos3 = expect(tokens, pos2, tRParen, ")")
+        return expr_node, pos3
+
+    raise SyntaxError(
+        f"SyntaxError at line {tok.line}, col {tok.column}: "
+        f"unexpected token '{tok.value}' in expression"
+    )
+
+# Second Level of precedence for arithmetic operations
+def parse_term(tokens, pos):
+
+    node, current_pos = parse_factor(tokens, pos)
+
+    while current_pos < len(tokens) and tokens[current_pos].type == tArith and tokens[current_pos].value in ("*", "/", "%"):
+        op_tok = tokens[current_pos]
+        right_node, next_pos = parse_factor(tokens, current_pos + 1)
+        node = make_node(f"BinOp {op_tok.value}", (node, right_node))
+        current_pos = next_pos
+
+    return node, current_pos
+
+# Third Level of precedence for arithmetic operations
+def parse_expr(tokens, pos):
+    node, current_pos = parse_term(tokens, pos)
+
+    while current_pos < len(tokens) and tokens[current_pos].type == tArith and tokens[current_pos].value in ("+", "-"):
+        op_tok = tokens[current_pos]
+        right_node, next_pos = parse_term(tokens, current_pos + 1)
+        node = make_node(f"BinOp {op_tok.value}", (node, right_node))
+        current_pos = next_pos
+
+    return node, current_pos
+
+def parse_cond(tokens, pos):
+
+    left_node, pos1 = parse_expr(tokens, pos)
+
+    if pos1< len(tokens) and tokens[pos1].type == tRel:
+        rel_tok = tokens[pos1]
+        right_node, pos2 = parse_expr(tokens, pos1 + 1)
+        return make_node(f"RelOp {rel_tok.value}", (left_node, right_node)), pos2 
+
+    err_pos = pos1 if pos1 < len(tokens) else pos1 - 1
+    tok = tokens[err_pos] if err_pos < len(tokens) else None
+    if tok:
+        raise SyntaxError(
+            f"SyntaxError at line {tok.line}, col {tok.column}: "
+            f"expected relational operator after expression"
+        )
