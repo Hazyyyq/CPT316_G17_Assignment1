@@ -276,3 +276,53 @@ def parse_cond(tokens, pos):
             f"SyntaxError at line {tok.line}, col {tok.column}: "
             f"expected relational operator after expression"
         )
+
+# ==============================================================================
+# AST (Functional Programming Paradigm - HAZIQ)
+# =============================================================================
+
+def print_ast(node, depth=0):
+
+    if not node:
+        return
+
+    label, children = node[0], node[1]
+
+    print("  " * depth + str(label))
+    for child in children:
+        print_ast(child, depth + 1)
+
+# ==============================================================================
+# Temporary test
+# =============================================================================
+
+if __name__ == "__main__":
+    import sys
+    from testHaziqLexerKira import print_token_stream, print_token_counts
+
+    filename = "public6_syntax_end_of_input.kira"
+    print(f"Reading file: {filename}...\n")
+
+    try:
+        with open(filename, "r") as file:
+            text = file.read()
+    except FileNotFoundError:
+        print(f"Error: Could not find '{filename}'. Make sure it's in the same folder.")
+        sys.exit(1)
+
+    tokens, errors = lexer(text)
+    print_token_stream(tokens)
+    print_token_counts(tokens)
+
+    if errors:
+        print("\n== LEXICAL ERRORS ==")
+        for err in errors:
+            print(err)
+        sys.exit(1)
+
+    try:
+        ast_root = run_statement_parser(parse_expr, parse_cond, tokens, errors)
+        print("\n== ABSTRACT SYNTAX TREE ==")
+        print_ast(ast_root)
+    except SyntaxError as e:
+        print(f"\n{e}")
