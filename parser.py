@@ -299,7 +299,7 @@ if __name__ == "__main__":
     print("\n== AST ==")
     try:
         ast_root = run_statement_parser(parse_expr, parse_cond, tokens, errors)
-        print("\n== ABSTRACT SYNTAX TREE ==")
+        # print("\n== ABSTRACT SYNTAX TREE ==")
         print_ast(ast_root)
     except SyntaxError as e:
         print(f"\n{e}")
