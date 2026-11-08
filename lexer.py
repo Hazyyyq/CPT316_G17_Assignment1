@@ -1,8 +1,3 @@
-# Declaring the token classes of Lexical Analyzer
-
-# CREDITS: Youtube- @codewarehouse5175 
-# Token given by the lecturer in the assignment, 
-# not sure if it is correct way to write it or not, but I will use it for now
 
 tKeyword = "KEYWORD"
 tIdentifier = "IDENTIFIER"
@@ -16,8 +11,8 @@ tLBrace = "LBRACE"
 tRBrace = "RBRACE"
 tSemicolon = "SEMICOLON"
 
-#REMINDER: The lexer skips spaces, tabs, and newlines. 
-#It also skips comments start with #. The lexer will not return any tokens for these characters.
+#The lexer skips spaces, tabs, newlines and comments start with #.. 
+#The lexer will not return any tokens for these characters.
 
 class Token:
     def __init__(self, type, value, line,column):
@@ -160,7 +155,6 @@ def lexer(text):
             )
             count += 1
             column += 1
-# Maybe can simplify using OR expression, cuz Dr bundle them into Arith token, but I will leave it for now
         
 
     return tokens, errors
@@ -221,4 +215,3 @@ if __name__ == "__main__":
     print_token_counts(tokens)
 
 
-#Will need to check again

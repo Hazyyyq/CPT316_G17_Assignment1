@@ -1,4 +1,4 @@
-from testHaziqLexerKira import (
+from lexer import (
     lexer,
     tKeyword, tIdentifier, tInteger, tArith, tRel,
     tAssign, tLParen, tRParen, tLBrace, tRBrace, tSemicolon
@@ -268,7 +268,7 @@ def print_ast(node, depth=0):
 
 if __name__ == "__main__":
     import sys
-    from testHaziqLexerKira import print_token_stream, print_token_counts
+    from Lexer import print_token_stream, print_token_counts
 
     filename = "public6_syntax_end_of_input.kira"
     print(f"Reading file: {filename}...\n")
