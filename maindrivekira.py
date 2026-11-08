@@ -1,6 +1,6 @@
 import sys
 import os
-from testHaziqLexerKira import (
+from lexer import (
     lexer, print_token_stream, print_token_counts
 )
 from parser import (
