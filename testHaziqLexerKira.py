@@ -7,8 +7,8 @@
 tKeyword = "KEYWORD"
 tIdentifier = "IDENTIFIER"
 tInteger = "INTEGER"
-tArith = "ARITH"
-tRel = "REL"
+tArith = "ARITH_OP"
+tRel = "REL_OP"
 tAssign = "ASSIGN"
 tLParen = "LPAREN"
 tRParen = "RPAREN"
@@ -84,7 +84,7 @@ def lexer(text):
                     count += 1
                     column += 1
         
-                errors.append("LexicalError at line {}, col {}: invalid sequence '{}'".format(line, start_column, reject_word))
+                errors.append("LexicalError at line {}, col {}: malformed token '{}'".format(line, start_column, reject_word))
                         
             else:
                 tokens.append(Token(tInteger, int(num), line, start_column))
@@ -154,7 +154,7 @@ def lexer(text):
 
         else:
             errors.append(
-                "LexicalError at line {}, column {}: "
+                "LexicalError at line {}, col {}: "
                 "invalid character '{}'"
                 .format(line, column, current_char)
             )
@@ -194,29 +194,31 @@ def print_token_counts(tokens):
 
     for token_type in order:
         if token_type in counts:
-            print("  {:11} {}".format(
+            print("  {:12} {}".format(
                 token_type, counts[token_type]
             ))
 
 
-#this just sample to test lexer. can be changed to whatever.
-with open("public1_arithmetic_if.kira", "r") as file:
-    text = file.read()
+if __name__ == "__main__":
+    import sys
 
-# Scan the source code
-tokens, errors = lexer(text)
+    filename = sys.argv[1] if len(sys.argv) > 1 else "public1_arithmetic_if.kira"
 
-# Display the results
-print_token_stream(tokens)
+    try:
+        with open(filename, "r") as file:
+            text = file.read()
+    except FileNotFoundError:
+        print(f"Error: Could not find '{filename}'.")
+        sys.exit(1)
 
-# Display lexical errors. it print error but please make it of there an error it cannot be pass to parsing
-if errors:
-    print("\n== LEXICAL ERRORS ==")
-    for error in errors:
-        print(error)
+    tokens, errors = lexer(text)
+    print_token_stream(tokens)
 
-print_token_counts(tokens)
+    if errors:
+        for error in errors:
+            print(error)
 
+    print_token_counts(tokens)
 
 
 #Will need to check again

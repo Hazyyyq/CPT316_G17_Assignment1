@@ -1,5 +1,5 @@
 from testHaziqLexerKira import (
-    lexer, tokens, errors,
+    lexer,
     tKeyword, tIdentifier, tInteger, tArith, tRel,
     tAssign, tLParen, tRParen, tLBrace, tRBrace, tSemicolon
 )
@@ -166,6 +166,8 @@ def parse_item(tokens, pos, parse_expr, parse_cond):
     Dispatches a top-level item to either a variable declaration or a statement.
     Grammar Rule: <item> -> <decl> | <stmt>
     """
+    if pos >= len(tokens):
+        raise SyntaxError("SyntaxError at end of input: expected declaration or statement")
     tok = tokens[pos]
     if tok.type == tKeyword and tok.value == "let":
         return parse_decl(tokens, pos, parse_expr)
@@ -197,7 +199,7 @@ def parse_program(tokens, parse_expr, parse_cond):
     return make_node("Program", (first_item,) + rest_items)
 
 # Starting point of the parser T-T
-def run_statement_parser(parse_expr_fn, parse_cond_fn, token_stream=tokens, error_list=errors):
+def run_statement_parser(parse_expr_fn, parse_cond_fn, token_stream, error_list):
     """Receives tokens and errors from the lexer and runs the parser if valid."""
     if error_list: #based on the lexer, if there are errors, we don't run the parser
         return None
@@ -269,13 +271,17 @@ def parse_cond(tokens, pos):
         right_node, pos2 = parse_expr(tokens, pos1 + 1)
         return make_node(f"RelOp {rel_tok.value}", (left_node, right_node)), pos2 
 
-    err_pos = pos1 if pos1 < len(tokens) else pos1 - 1
-    tok = tokens[err_pos] if err_pos < len(tokens) else None
-    if tok:
-        raise SyntaxError(
-            f"SyntaxError at line {tok.line}, col {tok.column}: "
-            f"expected relational operator after expression"
-        )
+    if pos1 >= len(tokens):
+        raise SyntaxError("SyntaxError at end of input: expected relational operator")
+
+    tok = tokens[pos1]
+    # err_pos = pos1 if pos1 < len(tokens) else pos1 - 1
+    # tok = tokens[err_pos] if err_pos < len(tokens) else None
+    #if tok:
+    raise SyntaxError(
+        f"SyntaxError at line {tok.line}, col {tok.column}: "
+        f"expected relational operator after expression"
+    )
 
 # ==============================================================================
 # AST (Functional Programming Paradigm - HAZIQ)
@@ -304,7 +310,7 @@ if __name__ == "__main__":
     print(f"Reading file: {filename}...\n")
 
     try:
-        with open(filename, "r") as file:
+        with open(filename, "r", encoding="utf-8") as file:
             text = file.read()
     except FileNotFoundError:
         print(f"Error: Could not find '{filename}'. Make sure it's in the same folder.")
@@ -312,14 +318,21 @@ if __name__ == "__main__":
 
     tokens, errors = lexer(text)
     print_token_stream(tokens)
-    print_token_counts(tokens)
+    # print_token_counts(tokens)
 
     if errors:
         print("\n== LEXICAL ERRORS ==")
         for err in errors:
             print(err)
-        sys.exit(1)
+        # sys.exit(1)
+    
+    print_token_counts(tokens)
 
+    if errors:
+        print(f"\n{len(errors)} lexical error(s). Parsing skipped.")
+        sys.exit(0)
+
+    print("\n== AST ==")
     try:
         ast_root = run_statement_parser(parse_expr, parse_cond, tokens, errors)
         print("\n== ABSTRACT SYNTAX TREE ==")
