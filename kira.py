@@ -1,5 +1,6 @@
 import sys
 import os
+import graphviz
 from lexer import (
     lexer, print_token_stream, print_token_counts
 )
@@ -7,16 +8,50 @@ from parser import (
     run_statement_parser, parse_expr, parse_cond, print_ast
 )
 
+class customASTGraphViz():
+
+    def __init__(self, ast_root):
+        self.ast_root = ast_root
+        self.graph = graphviz.Digraph(format='png')
+        self.graph.attr('node', shape='rectangle')
+
+    def add_nodes_edges(self, node):
+        if node is None:
+            return
+
+        if isinstance(node, (tuple, list)):
+            label, children = node[0], node[1]
+        else:
+            label = str(node)
+            children = []
+
+        node_id = str(id(node))
+        self.graph.node(node_id, label=str(label))
+
+        # Recursively add child nodes and edges
+        for child in children:
+            if child is not None:
+                    self.add_nodes_edges(child)
+                    self.graph.edge(node_id, str(id(child)))
+
+    def render_graph(self, output_filename='ast'):
+        self.add_nodes_edges(self.ast_root)
+        self.graph.render(output_filename, view=True)
+
+
 def main():
     # 1. Read input filename from command line (defaults to public1 if none provided)
+
     if len(sys.argv) > 1:
         filename = sys.argv[1]
     else:
-        filename = "public1_arithmetic_if.kira"
+        filename = input("Enter the filename: ").strip()
+        #filename = "public1_arithmetic_if.kira"
 
-    if not os.path.exists(filename):
+    while not os.path.exists(filename):
         print(f"Error: Could not find '{filename}'.")
-        sys.exit(1)
+        #sys.exit(1)
+        filename = input("Please enter a valid filename: ").strip()
 
     with open(filename, "r", encoding="utf-8") as file:
         text = file.read()
@@ -45,6 +80,10 @@ def main():
     try:
         ast_root = run_statement_parser(parse_expr, parse_cond, tokens, errors)
         print_ast(ast_root)
+        print("\n== AST GraphViz ==")
+        ast_graph = customASTGraphViz(ast_root)
+        ast_graph.render_graph()
+
     except SyntaxError as e:
         # Catches grammar violations cleanly without a Python stack trace
         print(e)

@@ -83,7 +83,6 @@ def lexer(text):
                         
             else:
                 tokens.append(Token(tInteger, int(num), line, start_column))
-               
 
         elif current_char in "+-*/%":
             tokens.append(Token(tArith, current_char, line, column))
@@ -186,7 +185,7 @@ def lexer(text):
     return tokens, errors
 
 def print_token_stream(tokens):
-    print("== TOKEN STREAM ==")
+    print("\n== TOKEN STREAM ==")
     print("LINE   COL  TYPE        LEXEME")
 
     for token in tokens:
