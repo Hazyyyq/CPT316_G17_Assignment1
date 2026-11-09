@@ -34,9 +34,12 @@ class customASTGraphViz():
                     self.add_nodes_edges(child)
                     self.graph.edge(node_id, str(id(child)))
 
-    def render_graph(self, output_filename='ast'):
+    def render_graph(self, output_filename='AST'):
         self.add_nodes_edges(self.ast_root)
-        self.graph.render(output_filename, view=True)
+        graph_output_path= self.graph.render(output_filename, view=False, cleanup=True)
+
+        if os.path.exists(graph_output_path):
+            os.startfile(graph_output_path)  # Open the generated graph image
 
 
 def main():
@@ -44,14 +47,16 @@ def main():
 
     if len(sys.argv) > 1:
         filename = sys.argv[1]
+        if not os.path.exists(filename):
+            print(f"Error: Could not find '{filename}'.")
+            sys.exit(1)
     else:
         filename = input("Enter the filename: ").strip()
         #filename = "public1_arithmetic_if.kira"
-
-    while not os.path.exists(filename):
-        print(f"Error: Could not find '{filename}'.")
-        #sys.exit(1)
-        filename = input("Please enter a valid filename: ").strip()
+        while not os.path.exists(filename):
+            print(f"Error: Could not find '{filename}'.")
+            #sys.exit(1)
+            filename = input("Please enter a valid filename: ").strip()
 
     with open(filename, "r", encoding="utf-8") as file:
         text = file.read()
@@ -80,9 +85,12 @@ def main():
     try:
         ast_root = run_statement_parser(parse_expr, parse_cond, tokens, errors)
         print_ast(ast_root)
-        print("\n== AST GraphViz ==")
-        ast_graph = customASTGraphViz(ast_root)
-        ast_graph.render_graph()
+        try:
+            print("\n== AST GraphViz ==")
+            ast_graph = customASTGraphViz(ast_root)
+            ast_graph.render_graph()
+        except Exception as e:
+            pass  # If GraphViz fails, only show the AST in text form
 
     except SyntaxError as e:
         # Catches grammar violations cleanly without a Python stack trace

@@ -33,6 +33,53 @@ def expect(tokens, pos, expected_type, expected_value=None):
     return tok, pos + 1
 
 
+# --- Program Entry ---
+
+def parse_program(tokens, parse_expr, parse_cond):
+    """
+    <program> -> <item> <item_list_tail>
+    Guarantees that the program is non-empty and all tokens are fully consumed.
+    """
+    if len(tokens) == 0:
+        raise SyntaxError("SyntaxError at end of input: empty program")
+
+    first_item, pos1 = parse_item(tokens, 0, parse_expr, parse_cond)
+    rest_items, final_pos = parse_item_list_tail(tokens, pos1, parse_expr, parse_cond)
+
+    # End of File Verification
+    if final_pos < len(tokens):
+        trailing_tok = tokens[final_pos]
+        raise SyntaxError(
+            f"SyntaxError at line {trailing_tok.line}, col {trailing_tok.column}: "
+            f"unexpected token '{trailing_tok.value}'"
+        )
+
+    return make_node("Program", (first_item,) + rest_items)
+
+def parse_item(tokens, pos, parse_expr, parse_cond):
+    """<item> -> <decl> | <stmt>"""
+    if pos >= len(tokens):
+        raise SyntaxError("SyntaxError at end of input: expected declaration or statement")
+    tok = tokens[pos]
+    if tok.type == tKeyword and tok.value == "let":
+        return parse_decl(tokens, pos, parse_expr)
+    return parse_stmt(tokens, pos, parse_expr, parse_cond)
+
+
+def parse_item_list_tail(tokens, pos, parse_expr, parse_cond):
+    """Recursively parses top-level items until the end of input."""
+    if pos >= len(tokens):
+        return (), pos
+    item, pos1 = parse_item(tokens, pos, parse_expr, parse_cond)
+    rest, pos2 = parse_item_list_tail(tokens, pos1, parse_expr, parse_cond)
+    return (item,) + rest, pos2
+
+def run_statement_parser(parse_expr_fn, parse_cond_fn, token_stream, error_list):
+    """Entry point: skips parsing if the lexer reported errors."""
+    if error_list:
+        return None
+    return parse_program(tuple(token_stream), parse_expr_fn, parse_cond_fn)
+
 # --- Statements ---
 
 def parse_decl(tokens, pos, parse_expr):
@@ -139,76 +186,27 @@ def parse_stmt(tokens, pos, parse_expr, parse_cond):
     )
 
 
-# --- Program Entry ---
-
-def parse_item(tokens, pos, parse_expr, parse_cond):
-    """<item> -> <decl> | <stmt>"""
-    if pos >= len(tokens):
-        raise SyntaxError("SyntaxError at end of input: expected declaration or statement")
-    tok = tokens[pos]
-    if tok.type == tKeyword and tok.value == "let":
-        return parse_decl(tokens, pos, parse_expr)
-    return parse_stmt(tokens, pos, parse_expr, parse_cond)
-
-
-def parse_item_list_tail(tokens, pos, parse_expr, parse_cond):
-    """Recursively parses top-level items until the end of input."""
-    if pos >= len(tokens):
-        return (), pos
-    item, pos1 = parse_item(tokens, pos, parse_expr, parse_cond)
-    rest, pos2 = parse_item_list_tail(tokens, pos1, parse_expr, parse_cond)
-    return (item,) + rest, pos2
-
-
-def parse_program(tokens, parse_expr, parse_cond):
-    """
-    <program> -> <item> <item_list_tail>
-    Guarantees that the program is non-empty and all tokens are fully consumed.
-    """
-    if len(tokens) == 0:
-        raise SyntaxError("SyntaxError at end of input: empty program")
-
-    first_item, pos1 = parse_item(tokens, 0, parse_expr, parse_cond)
-    rest_items, final_pos = parse_item_list_tail(tokens, pos1, parse_expr, parse_cond)
-
-    # End of File Verification
-    if final_pos < len(tokens):
-        trailing_tok = tokens[final_pos]
-        raise SyntaxError(
-            f"SyntaxError at line {trailing_tok.line}, col {trailing_tok.column}: "
-            f"unexpected token '{trailing_tok.value}'"
-        )
-
-    return make_node("Program", (first_item,) + rest_items)
-
-
-def run_statement_parser(parse_expr_fn, parse_cond_fn, token_stream, error_list):
-    """Entry point: skips parsing if the lexer reported errors."""
-    if error_list:
-        return None
-    return parse_program(tuple(token_stream), parse_expr_fn, parse_cond_fn)
-
 # ==============================================================================
 # PARSER FOR EXPRESSIONS (Functional Programming Paradigm - HAZIQ)
 # =============================================================================
 
 #Expression with higher precedence 
-def parse_factor(tokens, pos): 
+def parse_factor(tokens, pos): #acting as <factor>
 
     if pos >= len(tokens):
         raise SyntaxError("SyntaxError at end of input: expected expression")
 
     tok = tokens[pos]
 
-    # Rules id --> Node("Id <name>"), id become a name
+    # if the expr is an identifier
     if tok.type == tIdentifier:
         return make_node(f"Id {tok.value}"), pos + 1
 
-    # Rules int --> Node("Int <value>"), Int become a value
+    # if the expr is an integer
     if tok.type == tInteger:   
         return make_node(f"Int {tok.value}"), pos + 1 
 
-    # Rules ( <expr> ) --> Node("Paren <expr>") if the expression has parentheses, we look inside using parse_expr recursively
+    # if the expr is an expression in parentheses
     if tok.type == tLParen:
         _, pos1 = expect(tokens, pos, tLParen, "(")
         expr_node, pos2 = parse_expr(tokens, pos1)
@@ -221,29 +219,32 @@ def parse_factor(tokens, pos):
     )
 
 # Second Level of precedence for arithmetic operations
-def parse_term(tokens, pos):
+def parse_term_tail(tokens, pos, current_node): #acting as <term'>
 
-    node, current_pos = parse_factor(tokens, pos)
+    if pos < len(tokens) and tokens[pos].type == tArith and tokens[pos].value in ("*", "/", "%"): 
+        op_tok = tokens[pos] 
+        right_node, pos1 = parse_factor(tokens, pos + 1) # factor
+        new_node = make_node(f"BinOp {op_tok.value}", (current_node, right_node)) # / or * or %
+        return parse_term_tail(tokens, pos1, new_node) # recursively call to handle more terms
+    return current_node, pos #Epsilon 
 
-    while current_pos < len(tokens) and tokens[current_pos].type == tArith and tokens[current_pos].value in ("*", "/", "%"):
-        op_tok = tokens[current_pos]
-        right_node, next_pos = parse_factor(tokens, current_pos + 1)
-        node = make_node(f"BinOp {op_tok.value}", (node, right_node))
-        current_pos = next_pos
-
-    return node, current_pos
+def parse_term(tokens, pos): #acting as term
+    left_node, pos1 = parse_factor(tokens, pos) # factor
+    return parse_term_tail(tokens, pos1, left_node) # <term>
 
 # Third Level of precedence for arithmetic operations
-def parse_expr(tokens, pos):
-    node, current_pos = parse_term(tokens, pos)
+def parse_expr_tail(tokens, pos, current_node): #acting as <expr'>
 
-    while current_pos < len(tokens) and tokens[current_pos].type == tArith and tokens[current_pos].value in ("+", "-"):
-        op_tok = tokens[current_pos]
-        right_node, next_pos = parse_term(tokens, current_pos + 1)
-        node = make_node(f"BinOp {op_tok.value}", (node, right_node))
-        current_pos = next_pos
+    if pos < len(tokens) and tokens[pos].type == tArith and tokens[pos].value in ("+", "-"):
+        op_tok = tokens[pos]
+        right_node, pos1 = parse_term(tokens, pos + 1)
+        new_node = make_node(f"BinOp {op_tok.value}", (current_node, right_node))
+        return parse_expr_tail(tokens, pos1, new_node)
+    return current_node, pos
 
-    return node, current_pos
+def parse_expr(tokens, pos): #acting as <expr>
+    left_node, pos1 = parse_term(tokens, pos) # term
+    return parse_expr_tail(tokens, pos1, left_node) # <expr'>
 
 def parse_cond(tokens, pos):
 
