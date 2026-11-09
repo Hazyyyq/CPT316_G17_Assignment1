@@ -268,7 +268,7 @@ def print_ast(node, depth=0):
 
 if __name__ == "__main__":
     import sys
-    from Lexer import print_token_stream, print_token_counts
+    from lexer import print_token_stream, print_token_counts
 
     filename = "public6_syntax_end_of_input.kira"
     print(f"Reading file: {filename}...\n")
