@@ -9,11 +9,15 @@ from lexer import (
 # ==============================================================================
 
 def make_node(label, children=()):
+    """Constructs an immutable AST node as a tuple."""
     return (label, tuple(children))
 
 
 def expect(tokens, pos, expected_type, expected_value=None):
-    # Check if the token matches; advance position or raise SyntaxError
+    """
+    Pure validation helper.
+    Returns (matched_token, next_pos) or raises SyntaxError.
+    """
     if pos >= len(tokens):
         target = f"'{expected_value}'" if expected_value else expected_type
         raise SyntaxError(f"SyntaxError at end of input: expected {target}")
@@ -32,7 +36,7 @@ def expect(tokens, pos, expected_type, expected_value=None):
 # --- Statements ---
 
 def parse_decl(tokens, pos, parse_expr):
-    # Parse: let id = <expr>;
+    """Grammar: <decl> -> 'let' id '=' <expr> ';'"""
     _, pos1 = expect(tokens, pos, tKeyword, "let")
     id_tok, pos2 = expect(tokens, pos1, tIdentifier)
     _, pos3 = expect(tokens, pos2, tAssign, "=")
@@ -42,7 +46,7 @@ def parse_decl(tokens, pos, parse_expr):
 
 
 def parse_assign(tokens, pos, parse_expr):
-    # Parse: id = <expr>;
+    """Grammar: <assign> -> id '=' <expr> ';'"""
     id_tok, pos1 = expect(tokens, pos, tIdentifier)
     _, pos2 = expect(tokens, pos1, tAssign, "=")
     expr_node, pos3 = parse_expr(tokens, pos2)
@@ -51,7 +55,7 @@ def parse_assign(tokens, pos, parse_expr):
 
 
 def parse_print_stmt(tokens, pos, parse_expr):
-    # Parse: print(<expr>);
+    """Grammar: <print_stmt> -> 'print' '(' <expr> ')' ';'"""
     _, pos1 = expect(tokens, pos, tKeyword, "print")
     _, pos2 = expect(tokens, pos1, tLParen, "(")
     expr_node, pos3 = parse_expr(tokens, pos2)
@@ -61,7 +65,7 @@ def parse_print_stmt(tokens, pos, parse_expr):
 
 
 def parse_while_stmt(tokens, pos, parse_expr, parse_cond):
-    # Parse: while (<cond>) { ... }
+    """Grammar: <while_stmt> -> 'while' '(' <cond> ')' <block>"""
     _, pos1 = expect(tokens, pos, tKeyword, "while")
     _, pos2 = expect(tokens, pos1, tLParen, "(")
     cond_node, pos3 = parse_cond(tokens, pos2)
@@ -71,7 +75,7 @@ def parse_while_stmt(tokens, pos, parse_expr, parse_cond):
 
 
 def parse_if_stmt(tokens, pos, parse_expr, parse_cond):
-    # Parse: if (<cond>) { ... } optional else { ... }
+    """Grammar: <if_stmt> -> 'if' '(' <cond> ')' <block> ['else' <block>]"""
     _, pos1 = expect(tokens, pos, tKeyword, "if")
     _, pos2 = expect(tokens, pos1, tLParen, "(")
     cond_node, pos3 = parse_cond(tokens, pos2)
@@ -89,6 +93,7 @@ def parse_if_stmt(tokens, pos, parse_expr, parse_cond):
 # --- Blocks ---
 
 def parse_stmt_list_tail(tokens, pos, parse_expr, parse_cond):
+    """Recursively parses subsequent statements in a block until '}'."""
     if pos >= len(tokens):
         raise SyntaxError("SyntaxError at end of input: expected '}'")
     if tokens[pos].type == tRBrace:
@@ -99,7 +104,7 @@ def parse_stmt_list_tail(tokens, pos, parse_expr, parse_cond):
 
 
 def parse_block(tokens, pos, block_label, parse_expr, parse_cond):
-    # Parse block enclosed in { }
+    """Grammar: <block> -> '{' <stmt> <stmt_list_tail> '}'"""
     _, pos1 = expect(tokens, pos, tLBrace, "{")
     first_stmt, pos2 = parse_stmt(tokens, pos1, parse_expr, parse_cond)
     rest_stmts, pos3 = parse_stmt_list_tail(tokens, pos2, parse_expr, parse_cond)
@@ -108,7 +113,7 @@ def parse_block(tokens, pos, block_label, parse_expr, parse_cond):
 
 
 def parse_stmt(tokens, pos, parse_expr, parse_cond):
-    # Route statement by keyword or identifier
+    """Dispatches a single statement based on lookahead."""
     if pos >= len(tokens):
         raise SyntaxError("SyntaxError at end of input: expected statement")
 
@@ -137,7 +142,7 @@ def parse_stmt(tokens, pos, parse_expr, parse_cond):
 # --- Program Entry ---
 
 def parse_item(tokens, pos, parse_expr, parse_cond):
-    # Top-level item: either 'let' or a regular statement
+    """<item> -> <decl> | <stmt>"""
     if pos >= len(tokens):
         raise SyntaxError("SyntaxError at end of input: expected declaration or statement")
     tok = tokens[pos]
@@ -147,6 +152,7 @@ def parse_item(tokens, pos, parse_expr, parse_cond):
 
 
 def parse_item_list_tail(tokens, pos, parse_expr, parse_cond):
+    """Recursively parses top-level items until the end of input."""
     if pos >= len(tokens):
         return (), pos
     item, pos1 = parse_item(tokens, pos, parse_expr, parse_cond)
@@ -155,16 +161,29 @@ def parse_item_list_tail(tokens, pos, parse_expr, parse_cond):
 
 
 def parse_program(tokens, parse_expr, parse_cond):
+    """
+    <program> -> <item> <item_list_tail>
+    Guarantees that the program is non-empty and all tokens are fully consumed.
+    """
     if len(tokens) == 0:
         raise SyntaxError("SyntaxError at end of input: empty program")
 
     first_item, pos1 = parse_item(tokens, 0, parse_expr, parse_cond)
-    rest_items, _ = parse_item_list_tail(tokens, pos1, parse_expr, parse_cond)
+    rest_items, final_pos = parse_item_list_tail(tokens, pos1, parse_expr, parse_cond)
+
+    # End of File Verification
+    if final_pos < len(tokens):
+        trailing_tok = tokens[final_pos]
+        raise SyntaxError(
+            f"SyntaxError at line {trailing_tok.line}, col {trailing_tok.column}: "
+            f"unexpected token '{trailing_tok.value}'"
+        )
+
     return make_node("Program", (first_item,) + rest_items)
 
 
 def run_statement_parser(parse_expr_fn, parse_cond_fn, token_stream, error_list):
-    # Only run parser if lexer reported no errors
+    """Entry point: skips parsing if the lexer reported errors."""
     if error_list:
         return None
     return parse_program(tuple(token_stream), parse_expr_fn, parse_cond_fn)
