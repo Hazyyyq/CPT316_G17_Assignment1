@@ -11,7 +11,7 @@ tLBrace = "LBRACE"
 tRBrace = "RBRACE"
 tSemicolon = "SEMICOLON"
 
-#The lexer skips spaces, tabs, newlines and comments start with #.. 
+#The lexer skips spaces, tabs, newlines and comments start with #.
 #The lexer will not return any tokens for these characters.
 
 class Token:
@@ -146,6 +146,32 @@ def lexer(text):
             tokens.append(Token(tSemicolon, current_char, line, column))
             count += 1
             column += 1
+
+        elif current_char == '"':
+            start_column = column
+            bad_string = '"'
+            count += 1
+            column += 1
+
+            # Consume everything until the closing quote or end of line/file
+            while count < len(text) and text[count] not in '"\n':
+                bad_string += text[count]
+                count += 1
+                column += 1
+
+            if count < len(text) and text[count] == '"':
+                bad_string += '"'
+                count += 1
+                column += 1
+                errors.append(
+                    f"LexicalError at line {line}, col {start_column}: "
+                    f"strings are not supported '{bad_string}'"
+                )
+            else:
+                errors.append(
+                    f"LexicalError at line {line}, col {start_column}: "
+                    f"unterminated string literal '{bad_string}'"
+                )    
 
         else:
             errors.append(
