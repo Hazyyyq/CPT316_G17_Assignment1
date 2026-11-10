@@ -1,6 +1,11 @@
 import sys
 import os
-import graphviz
+
+try:
+    import graphviz
+except: 
+    pass
+
 from lexer import (
     lexer, print_token_stream, print_token_counts
 )
