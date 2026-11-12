@@ -16,7 +16,11 @@ from parser import (
 class customASTGraphViz():
 
     def __init__(self, ast_root):
-        self.ast_root = ast_root
+
+        #automatically add Graphviz to PATH on Windows if installed
+        if os.name == "nt" and os.path.exists(r"C:\Program Files\Graphviz\bin"):
+            os.environ["PATH"] += os.pathsep + r"C:\Program Files\Graphviz\bin"
+        self.ast_root = ast_root    
         self.graph = graphviz.Digraph(format='png')
         self.graph.attr('node', shape='rectangle')
 
@@ -33,7 +37,7 @@ class customASTGraphViz():
         node_id = str(id(node))
         self.graph.node(node_id, label=str(label))
 
-        # Recursively add child nodes and edges
+        # Add child nodes and edges recursively
         for child in children:
             if child is not None:
                     self.add_nodes_edges(child)
@@ -44,6 +48,7 @@ class customASTGraphViz():
         graph_output_path= self.graph.render(output_filename, view=False, cleanup=True)
 
         if os.path.exists(graph_output_path):
+            print("\n== AST GraphViz ==")
             os.startfile(graph_output_path)  # Open the generated graph image
 
 
@@ -91,7 +96,6 @@ def main():
         ast_root = run_statement_parser(parse_expr, parse_cond, tokens, errors)
         print_ast(ast_root)
         try:
-            print("\n== AST GraphViz ==")
             ast_graph = customASTGraphViz(ast_root)
             ast_graph.render_graph()
         except Exception as e:
