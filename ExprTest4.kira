@@ -1,0 +1,3 @@
+let 1num = 10;
+let msg = "hello";
+let bad = 20 @ 5;
