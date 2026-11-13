@@ -242,7 +242,7 @@ def parse_expr_tail(tokens, pos, current_node): #acting as <expr'>
         return parse_expr_tail(tokens, pos1, new_node)
     return current_node, pos
 
-def parse_expr(tokens, pos): #acting as <expr>
+def parse_expr(tokens, pos): # acting as <expr>
     left_node, pos1 = parse_term(tokens, pos) # term
     return parse_expr_tail(tokens, pos1, left_node) # <expr'>
 
@@ -259,9 +259,7 @@ def parse_cond(tokens, pos):
         raise SyntaxError("SyntaxError at end of input: expected relational operator")
 
     tok = tokens[pos1]
-    # err_pos = pos1 if pos1 < len(tokens) else pos1 - 1
-    # tok = tokens[err_pos] if err_pos < len(tokens) else None
-    #if tok:
+
     raise SyntaxError(
         f"SyntaxError at line {tok.line}, col {tok.column}: "
         f"expected relational operator after expression"
