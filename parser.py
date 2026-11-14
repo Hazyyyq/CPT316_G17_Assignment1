@@ -1,5 +1,5 @@
 from lexer import (
-    lexer,
+    #lexer,
     tKeyword, tIdentifier, tInteger, tArith, tRel,
     tAssign, tLParen, tRParen, tLBrace, tRBrace, tSemicolon
 )
@@ -269,13 +269,21 @@ def parse_cond(tokens, pos):
 # AST (Functional Programming Paradigm - HAZIQ)
 # =============================================================================
 
-def print_ast(node, depth=0):
-
+def format_ast(node, depth=0):
+    """Turn the AST into a string representation."""
     if not node:
-        return
+        return ""
 
     label, children = node[0], node[1]
 
-    print("  " * depth + str(label))
+    result = "  " * depth + str(label) + "\n"
+
     for child in children:
-        print_ast(child, depth + 1)
+        result += format_ast(child, depth + 1)
+
+    return result
+
+def print_ast(node):
+    """Prints the AST"""
+    ast_output = format_ast(node)
+    print(ast_output)
